@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Demo</title>
+		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/css/epoch.min.css" />
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/js/epoch.min.js"></script>
+	</head>
+	<body>
+		<h2>Raw Data</h2>
+		<div id="raw-chart" style="height: 250px" class="epoch"></div>
+		<h2>Delta Data</h2>
+		<div id="delta-chart" style="height: 250px" class="epoch"></div>
+		<h2>Theta Data</h2>
+		<div id="theta-chart" style="height: 250px" class="epoch"></div>
+		<h2>Alpha Data</h2>
+		<div id="alpha-chart" style="height: 250px" class="epoch"></div>
+		<h2>Beta Data</h2>
+		<div id="beta-chart" style="height: 250px" class="epoch"></div>
+
+		<script>
+			const RHYTHMS = ["delta", "theta", "alpha", "beta"];
+			const BAND_RANGE = [-3, 3];
+			const BAND_SENSORS = ["Left Ear", "Left Forehead", "Right Forehead", "Right Ear"];
+
+			function chart(name, labels, range) {
+				var initialChartData = [];
+
+				for(var i=0; i<labels.length; i++) {
+					initialChartData.push({
+						label: labels[i],
+						values: [],
+						range: range
+					});
+				}
+
+				var chart = $("#" + name + "-chart").epoch({
+					type: "time.line",
+					axes: ["left", "right"],
+					range: { left: range, right: range },
+					data: initialChartData
+				});
+
+				var socket = new WebSocket("ws://localhost:8888/stream/" + name);
+
+				socket.onmessage = function(e) {
+					var messages = e.data.split("\n");
+
+					for(var i=0; i<messages.length; i++) {
+						if(messages[i] !== "") {
+							var message = JSON.parse(messages[i]);
+							var entry = [];
+
+							for(var j=0; j<message.data.length; j++) {
+								entry.push({
+									time: message.timestamp,
+									y: message.data[j]
+								});
+							}
+
+							chart.push(entry);
+						}
+					}
+				}
+			}
+
+			$(function() {
+				chart("raw", BAND_SENSORS.concat(["Right Auxiliary"]), [-1000, 1000]);
+				chart("delta", BAND_SENSORS, BAND_RANGE);
+				chart("theta", BAND_SENSORS, BAND_RANGE);
+				chart("alpha", BAND_SENSORS, BAND_RANGE);
+				chart("beta", BAND_SENSORS, BAND_RANGE);
+			});
+		</script>
+	</body>
+</html>
