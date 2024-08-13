@@ -46,19 +46,24 @@ def _target(queue, address=None, backend=None, interface=None, name=None):
             name=name
         )
 
-        muse.connect()
-        print('Connected')
+        connect = muse.connect()
+        print('Connected', connect)
+        
         muse.start()
+        # muse._subscribe_telemetry()
 
         initial_time = time.strftime("%H:%M:%S", time.localtime(time.time()))
 
         print('Streaming ...', initial_time )
+        # muse._subscribe_telemetry()
 
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
+            print()
             print('Start Time__', initial_time, "__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
+            print()
         finally:
             muse.stop()
             muse.disconnect()
@@ -66,7 +71,9 @@ def _target(queue, address=None, backend=None, interface=None, name=None):
             print('Start Time__', initial_time, "__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
     except Exception as e:
         # queue.put(e)
+        print()
         print(f"An error occurred: {e}")
+        print()
 
 def get_raw(timeout=30, **kwargs):
     q = Queue()

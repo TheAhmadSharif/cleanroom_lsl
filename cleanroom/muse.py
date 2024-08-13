@@ -16,7 +16,7 @@ ATTR_TP9 = '273e0003-4c4d-454d-96be-f03bac821358' # 0x1f-0x21
 ATTR_AF7 = '273e0004-4c4d-454d-96be-f03bac821358' # fp1 0x22-0x24
 ATTR_AF8 = '273e0005-4c4d-454d-96be-f03bac821358' # fp2 0x25-0x27
 ATTR_TP10 = '273e0006-4c4d-454d-96be-f03bac821358' # 0x28-0x2a
-
+ATTR_TELEMETRY = "273e000b-4c4d-454d-96be-f03bac821358"
 
 class Muse():
     """Muse 2016 headband"""
@@ -104,12 +104,10 @@ class Muse():
         self._init_sample()
         self.last_tm = 0
         self.device.char_write_handle(0x000e, [0x02, 0x64, 0x0a], False)
-        print(" __ Start __")
 
     def stop(self):
         """Stop streaming."""
         self.device.char_write_handle(0x000e, [0x02, 0x68, 0x0a], False)
-        print(" __ stop __")
 
     def disconnect(self):
         """disconnect."""
@@ -126,6 +124,10 @@ class Muse():
                               callback=self._handle_eeg)
         self.device.subscribe(ATTR_TP10,
                               callback=self._handle_eeg)
+        
+
+    def _subscribe_telemetry(self):
+        self.device.subscribe(ATTR_TELEMETRY, callback=self._handle_telemetry)
 
     def _unpack_eeg_channel(self, packet):
         """Decode data packet of one eeg channel.
@@ -175,3 +177,18 @@ class Muse():
             self.callback(self.data, timestamps)
             self.callback_eeg(self.data, timestamps)
             self._init_sample()
+    
+
+    def _handle_telemetry(self, handle, packet):
+        """Handle the telemetry (battery, temperature and stuff) incoming data"""
+
+        if handle != 26:  # handle 0x1a
+            return
+
+        bit_decoder = bitstring.Bits(bytes=packet)
+        pattern = "uint:16,uint:16,uint:16,uint:16,uint:16"  # The rest is 0 padding
+        data = bit_decoder.unpack(pattern)
+
+        battery = data[1] / 512
+
+        print("Battery __", battery, localtime(time()), '________________')
