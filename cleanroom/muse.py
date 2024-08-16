@@ -18,6 +18,8 @@ ATTR_AF8 = '273e0005-4c4d-454d-96be-f03bac821358' # fp2 0x25-0x27
 ATTR_TP10 = '273e0006-4c4d-454d-96be-f03bac821358' # 0x28-0x2a
 ATTR_TELEMETRY = "273e000b-4c4d-454d-96be-f03bac821358"
 
+
+interface = 'COM5' if platform.system() == 'Windows' else '/dev/ttyACM0'
 class Muse():
     """Muse 2016 headband"""
 

@@ -36,8 +36,6 @@ LSL_EEG_CHUNK = 12
 ####################################################
 
 
-
-
 class Muse:
     """Muse EEG headband"""
 
@@ -341,11 +339,14 @@ class Muse:
 ####################  Stream    ####################
 ####################################################
 ####################################################
+
+initial_time = None
+
 def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backend):
-    # Function to start and manage the stream
+    global initial_time
+
     def start_stream():
         try:
-
             eeg_info = mne_lsl.lsl.StreamInfo(
                 "Muse",
                 stype="EEG",
@@ -376,57 +377,60 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                 backend=backend
             )
 
-
-            if not hasattr(muse, 'connected') or not muse.connected:
-                didConnect = muse.connect() 
-                muse.connected = didConnect  # Store the connection status
-            else:
-                didConnect = muse.connected  # Use the stored connection status
+            didConnect = muse.connect()
 
             if didConnect:
                 initial_time = strftime("%H:%M:%S", localtime(time()))
-                muse._subscribe_telemetry()
+                muse.keep_alive()
                 muse.start()
+                muse._subscribe_telemetry()
 
                 print(f"Streaming... EEG", '___', initial_time)
-                while mne_lsl.lsl.local_clock() - muse.last_timestamp < 5:
-                    if(didConnect):
-                        muse.start() 
-                        muse._subscribe_telemetry()
+
+                while True:
+                    if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
+                        print("No data received for 5 seconds. Reconnecting...")
+                        raise Exception("No data received, attempting to reconnect.")
+                    
                     try:
                         sleep(1)
                     except KeyboardInterrupt:
-                        muse.disconnect()
                         print("Stream interrupted. Stopping...")
                         playsound('alert.mp3')
+                        muse.disconnect()
                         return False
 
-                if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
-                    print("No data received for 60 seconds. Disconnecting...")
-                print("Disconnected.", '___', strftime("%H:%M:%S", localtime(time())))
-                playsound('alert.mp3', 'didConnect', didConnect)
-                muse.disconnect()
-           
+             
 
-                print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())))
+                
 
         except Exception as e:
-            print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())), 'didConnect')
+            print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
+            muse.keep_alive()
             playsound('alert.mp3')
-            muse.disconnect()
             return False
-        
+
         return True
 
-    # Main loop to keep trying to connect
     while True:
-        if start_stream():
-            print("Stream completed without errors.")
+        try:
+            success = start_stream()
+            if success:
+                playsound('alert.mp3')
+                break
+
+        except Exception as e:
+            print(f"Error during streaming: {e}")
             playsound('alert.mp3')
-            break
-        else:
-            print("Attempting to reconnect ... ", 'didConnect')
-            sleep(1)
+
+        print("Attempting to reconnect ...")
+        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())))
+
+        if backend == 'bgapi':
+            pygatt.BGAPIBackend(serial_port=interface).stop()
+
+        sleep(.25)  # Delay before trying to reconnect
+
 
 ########################## 
 
@@ -446,7 +450,7 @@ parser.add_argument(
     "--backend",
     dest="backend",
     type=str,
-    default='bluetooth',
+    default='bgapi',
     help="Device MAC address.",
 )
 

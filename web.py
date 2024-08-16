@@ -155,7 +155,7 @@ def main():
                       dest="name", type='string', default=None,
                       help="Name of the device.")
     parser.add_option("-b", "--backend",
-                      dest="backend", type='string', default="auto",
+                      dest="backend", type='string', default="bgapi",
                       help="pygatt backend to use. Can be `auto`, `gatt` or `bgapi`. Defaults to `auto`.")
     parser.add_option("-i", "--interface",
                       dest="interface", type='string', default=None,
