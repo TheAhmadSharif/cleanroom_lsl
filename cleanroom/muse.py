@@ -8,7 +8,8 @@ import bitstring
 import pygatt
 import numpy as np
 from time import time, sleep
-from sys import platform
+import sys
+import platform
 
 from time import localtime, strftime
 
@@ -40,14 +41,11 @@ class Muse():
         self.interface = interface
         self.time_func = time_func
 
-        if backend in ['auto', 'gatt', 'bgapi']:
-            if backend == 'auto':
-                if platform == "linux" or platform == "linux2":
-                    self.backend = 'gatt'
-                else:
-                    self.backend = 'bgapi'
+        if backend in ['gatt', 'bgapi']:
+            if backend == 'bgapi':
+                self.backend = 'bgapi'
             else:
-                self.backend = backend
+                self.backend = 'gatt'
         else:
             raise(ValueError('Backend must be auto, gatt or bgapi'))
 

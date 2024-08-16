@@ -381,13 +381,13 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
             if didConnect:
                 initial_time = strftime("%H:%M:%S", localtime(time()))
-                muse.keep_alive()
                 muse.start()
                 muse._subscribe_telemetry()
 
                 print(f"Streaming... EEG", '___', initial_time)
 
                 while True:
+                    muse.keep_alive()
                     if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
                         print("No data received for 5 seconds. Reconnecting...")
                         raise Exception("No data received, attempting to reconnect.")
@@ -406,7 +406,8 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
         except Exception as e:
             print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
-            muse.keep_alive()
+            if backend == 'bgapi':
+                pygatt.BGAPIBackend(serial_port=interface).stop()
             playsound('alert.mp3')
             return False
 
@@ -421,6 +422,9 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
         except Exception as e:
             print(f"Error during streaming: {e}")
+            if backend == 'bgapi':
+                pygatt.BGAPIBackend(serial_port=interface).stop()
+            
             playsound('alert.mp3')
 
         print("Attempting to reconnect ...")

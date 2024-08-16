@@ -3,9 +3,6 @@
 import json
 
 
-from functools import partial
-import mne_lsl.lsl
-
 class Sample:
     """A sampling of sensor data at a specific time"""
 
