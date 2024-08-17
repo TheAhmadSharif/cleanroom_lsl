@@ -3,19 +3,21 @@ from .models import Sample
 import time
 from multiprocessing import Process, Queue
 
-
+from queue import Empty
 from functools import partial
 import mne_lsl.lsl
 
-
+from playsound import playsound
 def _target(queue, address=None, backend=None, interface=None, name=None):
     def add_to_queue(data, timestamps):
         for i in range(12):
             queue.put(Sample(timestamps[i], data[:, i]))
 
     try:
-
+        
         ##################################################
+
+       
         eeg_info = mne_lsl.lsl.StreamInfo(
             "Muse",
             stype="EEG",
@@ -72,7 +74,7 @@ def _target(queue, address=None, backend=None, interface=None, name=None):
     except Exception as e:
         # queue.put(e)
         print()
-        print(f"An error occurred: {e}")
+        print(f"An error occurred: {e}", '___ 75 ___')
         print()
 
 def get_raw(timeout=30, **kwargs):
@@ -80,11 +82,21 @@ def get_raw(timeout=30, **kwargs):
     p = Process(target=_target, args=(q,), kwargs=kwargs)
     p.daemon = True
     p.start()
-
-    while True:
-        item = q.get(timeout=timeout)
-
-        if isinstance(item, Exception):
-            raise item
-        else:
-            yield item
+    
+    try:
+        while True:
+            try:
+                item = q.get(timeout=timeout)
+                if isinstance(item, Exception):
+                    raise item
+                else:
+                    yield item
+            except Empty:
+                print("Queue is empty, stopping the stream.")
+                break  # Stop the loop if the queue is empty
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        print("Stopped Streaming")
+        print("__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
+        playsound('alert.mp3') # In here ?????

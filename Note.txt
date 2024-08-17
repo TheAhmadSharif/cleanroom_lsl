@@ -1,1 +1,1 @@
-sudo python3 web.py -a 00:55:DA:BB:86:C9 -b bgapi 
+sudo python3 web.py -a 00:55:DA:BB:86:C9 -b bgapi

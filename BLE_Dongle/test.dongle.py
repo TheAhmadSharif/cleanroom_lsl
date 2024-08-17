@@ -77,7 +77,6 @@ class Muse:
         """Connect to the device"""
 
         print(f"Connecting to {self.address}...", '–––', strftime("%H:%M:%S", localtime(time())), '______')
-        # self.adapter =  pygatt.GATTToolBackend()
 
         if self.backend == 'bgapi':
             self.adapter = pygatt.BGAPIBackend(serial_port=interface)
@@ -135,7 +134,9 @@ class Muse:
         """Start streaming."""
         self.first_sample = True
         self._init_sample()
+        self._init_ppg_sample()
         self.last_tm = 0
+        self.last_tm_ppg = 0
         self._init_control()
         self.resume()
 
@@ -323,7 +324,7 @@ class Muse:
 
         current_time = time()
         if current_time - self.last_battery_print_time >= 600:
-            print("Battery ______", battery, ' % ______', strftime("%H:%M:%S", localtime(current_time)), '______')
+            print("Battery ______", battery, '______', strftime("%H:%M:%S", localtime(current_time)), '______')
             self.last_battery_print_time = current_time  # Update the last print time
 
 
@@ -342,8 +343,10 @@ initial_time = None
 
 def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backend):
     global initial_time
-    initial_time = strftime("%H:%M:%S", localtime(time()))
+    
+    sample_counter = 0 
     def start_stream():
+        nonlocal sample_counter
         try:
             eeg_info = mne_lsl.lsl.StreamInfo(
                 "Muse",
@@ -380,19 +383,27 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
             if didConnect:
                 
                 muse.start()
+
+                ### Disconnect after 100 second ????
                 muse._subscribe_telemetry()
+
+                start_time = time()  # Record the start time
+                initial_time = strftime("%H:%M:%S", localtime(time())) #### Print this Initial Time to
 
                 print(f"Streaming... EEG", '___', initial_time)
 
                 while True:
-                   
-                    t = muse.keep_alive()
+                    if sample_counter >= 30:
+                        muse.stop()
+                        muse.disconnect()
+                        break
+                    
                     if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
+                        muse.keep_alive()
                         print("No data received for 5 seconds. Reconnecting...")
                         raise Exception("No data received, attempting to reconnect.")
                     
                     try:
-                        print("Test")
                         sleep(1)
                     except KeyboardInterrupt:
                         print("Stream interrupted. Stopping...")
@@ -400,12 +411,19 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                         muse.disconnect()
                         return False
 
+             
+
+                
+
         except Exception as e:
+            muse.disconnect()
             print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
             if backend == 'bgapi':
                 pygatt.BGAPIBackend(serial_port=interface).stop()
+            playsound('alert.mp3')
             return False
 
+        return True
 
     while True:
         try:
