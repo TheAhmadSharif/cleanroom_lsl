@@ -1,1 +1,5 @@
 sudo python3 web.py -a 00:55:DA:BB:86:C9 -b bgapi
+
+python.exe web.py -a 00:55:DA:BB:86:C9 -b bgapi
+
+pip install sounddevice playsound numpy panda

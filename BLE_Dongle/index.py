@@ -417,14 +417,11 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
 
                        
-                        print(resume_status, '__ Resume_status __')
                         print()
-                        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())))
+                        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())), resume_status, '__ Resume_status __')
                         print()
                         
-                        service_name="serial-getty@USB0.service"
-                        result = subprocess.run(['sudo', 'systemctl', 'stop', service_name], check=True, text=True, capture_output=True)
-                        print(f"Service '{service_name}' stopped successfully.")
+                      
                     
                     try:
                         sleep(1)

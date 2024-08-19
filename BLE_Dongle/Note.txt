@@ -1,7 +1,13 @@
 python3 index.py -a 00:55:DA:BB:86:C9 -b bgapi
+python.exe index.py -a 00:55:DA:BB:86:C9 -b bgapi
 
 Default bgapi
 
 gatt for laptop bluetooth
 
 MuseLSL2 stream -a 00:55:DA:BB:86:C9
+
+
+
+pip install pylsl py-mon pynput pyxdf sounddevice
+pip install pylsl pynput pyxdf sounddevice
