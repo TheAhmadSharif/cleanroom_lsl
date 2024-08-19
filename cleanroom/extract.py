@@ -6,8 +6,19 @@ from multiprocessing import Process, Queue
 from queue import Empty
 from functools import partial
 import mne_lsl.lsl
-
 from playsound import playsound
+
+import sounddevice as sd
+import numpy as np
+import pandas as pd
+fs = 46000
+df_alert = pd.read_csv('alert.csv')
+start_data = df_alert['Amplitude'].values
+
+start_max_val = np.max(np.abs(start_data))
+normalized_data_start = start_data / np.max(np.abs(start_data))
+
+
 def _target(queue, address=None, backend=None, interface=None, name=None):
     def add_to_queue(data, timestamps):
         for i in range(12):
@@ -70,6 +81,7 @@ def _target(queue, address=None, backend=None, interface=None, name=None):
             muse.stop()
             muse.disconnect()
             print("Disconnected ")
+            sd.play(normalized_data_start, fs)
             print('Start Time__', initial_time, "__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
     except Exception as e:
         # queue.put(e)

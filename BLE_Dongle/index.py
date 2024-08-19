@@ -8,6 +8,19 @@ import logging
 import argparse
 import sys
 import platform
+import subprocess
+import sounddevice as sd
+import numpy as np
+import pandas as pd
+
+import sounddevice as sd
+import numpy as np
+import pandas as pd
+fs = 46000
+df_alert = pd.read_csv('alert.csv')
+start_data = df_alert['Amplitude'].values
+start_max_val = np.max(np.abs(start_data))
+normalized_data_start = start_data / np.max(np.abs(start_data))
 
 log_level = logging.ERROR
 backend = 'dongle'
@@ -396,10 +409,22 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                 while True:
                     _counter += 1
                     if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
-                        print(" Resume Start ", strftime("%H:%M:%S", localtime(time())) )
-                        muse.resume()
-                        print("No data received for 5 seconds. Reconnecting...")
-                        raise Exception("No data received, attempting to reconnect.")
+                        print(" Resume Start ", strftime("%H:%M:%S", localtime(time())), 'Connection Status __', didConnect )
+                        resume_status = muse.resume()
+
+                        sd.play(normalized_data_start, fs)
+                        sd.wait()
+
+
+                       
+                        print(resume_status, '__ Resume_status __')
+                        print()
+                        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())))
+                        print()
+                        
+                        service_name="serial-getty@USB0.service"
+                        result = subprocess.run(['sudo', 'systemctl', 'stop', service_name], check=True, text=True, capture_output=True)
+                        print(f"Service '{service_name}' stopped successfully.")
                     
                     try:
                         sleep(1)
@@ -426,7 +451,7 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
             if not alert_played:  # Check if alert has been played
                 playsound('alert.mp3')
                 alert_played = True 
-        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time()))) 
+        
         sleep(1)
         print("Attempting to reconnect ...")
         sleep(.25)  # Delay before trying to reconnect
