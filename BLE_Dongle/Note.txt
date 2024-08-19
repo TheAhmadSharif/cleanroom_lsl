@@ -3,3 +3,5 @@ python3 index.py -a 00:55:DA:BB:86:C9 -b bgapi
 Default bgapi
 
 gatt for laptop bluetooth
+
+MuseLSL2 stream -a 00:55:DA:BB:86:C9

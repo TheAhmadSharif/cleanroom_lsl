@@ -10,7 +10,7 @@ import sys
 import platform
 
 log_level = logging.ERROR
-backend = 'bgapi'
+backend = 'dongle'
 interface = 'COM5' if platform.system() == 'Windows' else '/dev/ttyACM0'
 
 ############# Muse ##############
@@ -338,12 +338,19 @@ class Muse:
 ####################################################
 ####################################################
 
-initial_time = None
 
+def stop_bluetooth(backend, didconnect):
+    if backend == 'bgapi':
+        pygatt.BGAPIBackend(serial_port=interface).stop()
+  
+
+initial_time = None
+alert_played = False 
 def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backend):
     global initial_time
-    initial_time = strftime("%H:%M:%S", localtime(time()))
+    global alert_played 
     def start_stream():
+        didConnect = False
         try:
             eeg_info = mne_lsl.lsl.StreamInfo(
                 "Muse",
@@ -364,7 +371,6 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                 outlet.push_chunk(data.T, timestamps[-1])
 
             push_eeg = partial(push, outlet=eeg_outlet)
-
             muse = Muse(
                 address=address,
                 callback_eeg=push_eeg,
@@ -374,25 +380,28 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                 preset=preset,
                 backend=backend
             )
-
+            
             didConnect = muse.connect()
 
             if didConnect:
                 
                 muse.start()
                 muse._subscribe_telemetry()
+                initial_time = strftime("%H:%M:%S", localtime(time())) 
 
                 print(f"Streaming... EEG", '___', initial_time)
 
+                _counter = 1
+
                 while True:
-                   
-                    t = muse.keep_alive()
+                    _counter += 1
                     if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
+                        print(" Resume Start ", strftime("%H:%M:%S", localtime(time())) )
+                        muse.resume()
                         print("No data received for 5 seconds. Reconnecting...")
                         raise Exception("No data received, attempting to reconnect.")
                     
                     try:
-                        print("Test")
                         sleep(1)
                     except KeyboardInterrupt:
                         print("Stream interrupted. Stopping...")
@@ -402,8 +411,7 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
         except Exception as e:
             print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
-            if backend == 'bgapi':
-                pygatt.BGAPIBackend(serial_port=interface).stop()
+            stop_bluetooth(backend, didConnect)
             return False
 
 
@@ -415,16 +423,12 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
         except Exception as e:
             print(f"Error during streaming: {e}")
-            if backend == 'bgapi':
-                pygatt.BGAPIBackend(serial_port=interface).stop()
-            playsound('alert.mp3')
-
+            if not alert_played:  # Check if alert has been played
+                playsound('alert.mp3')
+                alert_played = True 
+        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time()))) 
+        sleep(1)
         print("Attempting to reconnect ...")
-        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())))
-
-        if backend == 'bgapi':
-            pygatt.BGAPIBackend(serial_port=interface).stop()
-
         sleep(.25)  # Delay before trying to reconnect
 
 
@@ -459,5 +463,4 @@ if not args.address:
     sys.exit(1)  
 
 
-print(args.backend, '___args.backend ___')
 stream(args.address, ppg=False, acc=False, gyro=False, preset="p50", backend=args.backend)
