@@ -89,7 +89,7 @@ class Muse:
     def connect(self):
         """Connect to the device"""
 
-        print(f"Connecting to {self.address}...", '–––', strftime("%H:%M:%S", localtime(time())), '______')
+        print(f"Connecting to {self.address}...", '______', strftime("%H:%M:%S", localtime(time())), '______')
         self.adapter =  pygatt.GATTToolBackend()
 
         ''' 
@@ -452,7 +452,7 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
             return False
 
     attempts = 0
-    max_attempts = 4
+    max_attempts = 2
 
     while attempts < max_attempts:
         try:
