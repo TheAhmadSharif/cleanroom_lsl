@@ -90,14 +90,13 @@ class Muse:
         """Connect to the device"""
 
         print(f"Connecting to {self.address}...", '–––', strftime("%H:%M:%S", localtime(time())), '______')
-        self.adapter =  pygatt.GATTToolBackend()
+        # self.adapter =  pygatt.GATTToolBackend()
 
-        ''' 
         if self.backend == 'bgapi':
             self.adapter = pygatt.BGAPIBackend(serial_port=interface)
         else:
             self.adapter = pygatt.GATTToolBackend()
-        '''
+
 
         self.adapter.start()
         self.device = self.adapter.connect(self.address)
@@ -105,8 +104,9 @@ class Muse:
         if self.preset not in ["none", "None"]:
             self.select_preset(self.preset)
 
-       
-        self._subscribe_eeg()
+        # subscribes to EEG stream
+        if self.enable_eeg:
+            self._subscribe_eeg()
 
         if self.enable_control:
             self._subscribe_control()
@@ -150,7 +150,6 @@ class Muse:
         self._init_sample()
         self.last_tm = 0
         self._init_control()
-        self.keep_alive()
         self.resume()
 
     def resume(self):
@@ -186,7 +185,6 @@ class Muse:
         self.device.subscribe(ATTR_AF7, callback=self._handle_eeg)
         self.device.subscribe(ATTR_AF8, callback=self._handle_eeg)
         self.device.subscribe(ATTR_TP10, callback=self._handle_eeg)
-        
 
     def _unpack_eeg_channel(self, packet):
         aa = bitstring.Bits(bytes=packet)
@@ -367,7 +365,6 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
     global alert_played 
     def start_stream():
         didConnect = False
-        global alert_played
         try:
             eeg_info = mne_lsl.lsl.StreamInfo(
                 "Muse",
@@ -410,40 +407,32 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
                 _counter = 1
 
-              
-                muse.keep_alive()
+                while True:
+                    _counter += 1
+                    if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
+                        print("Resume Start ", strftime("%H:%M:%S", localtime(time())), 'Connection Status __', didConnect )
+                        resume_status = muse.resume()
+
+                        if(alert_played == False):
+                            sd.play(normalized_data_start, fs)
+                            sd.wait()
+                            alert_played = True
 
 
-                ###############################
-
-                while mne_lsl.lsl.local_clock() - muse.last_timestamp < 5:
+                       
+                        print()
+                        print('Start Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())), resume_status, '__ Resume_status __')
+                        print()
+                        
+                      
+                    
                     try:
-                        muse.keep_alive()
                         sleep(1)
                     except KeyboardInterrupt:
-                        
                         print("Stream interrupted. Stopping...")
-                        break
-                    except Exception as e:
-                        print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
-                        muse.stop()
-                        sleep(3)
+                        playsound('alert.mp3')
+                        muse.disconnect()
                         return False
-
-                if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
-                    print("No data received for 60 seconds. Disconnecting...")
-                    del muse
-                print("Disconnected.")
-                if(alert_played == False):
-                    sd.play(normalized_data_start, fs)
-                    sd.wait()
-                    alert_played = True
-                    print('\nStart Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())),  '__ Resume_status __\n')
-
-
-                ###############################
-                        
-               
 
         except Exception as e:
             print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
@@ -451,22 +440,22 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
             sleep(3)
             return False
 
-    attempts = 0
-    max_attempts = 4
 
-    while attempts < max_attempts:
+    while True:
         try:
             success = start_stream()
             if success:
                 break
+
         except Exception as e:
             print(f"Error during streaming: {e}")
-    
-        sleep(1)
-        print(f"\nAttempting to reconnect ... (Attempt {attempts + 1}/{max_attempts})\n")
-        sleep(0.25)  # Delay before trying to reconnect
+            if not alert_played:  # Check if alert has been played
+                playsound('alert.mp3')
+                alert_played = True 
         
-        attempts += 1
+        sleep(1)
+        print("\nAttempting to reconnect ...\n")
+        sleep(.25)  # Delay before trying to reconnect
 
 
 ########################## 

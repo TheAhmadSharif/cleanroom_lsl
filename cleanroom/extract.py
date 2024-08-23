@@ -6,7 +6,7 @@ from multiprocessing import Process, Queue
 from queue import Empty
 from functools import partial
 import mne_lsl.lsl
-from playsound import playsound
+import subprocess
 
 import sounddevice as sd
 import numpy as np
@@ -111,4 +111,3 @@ def get_raw(timeout=30, **kwargs):
     finally:
         print("Stopped Streaming")
         print("__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
-        playsound('alert.mp3') # In here ?????
