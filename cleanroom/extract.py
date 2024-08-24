@@ -6,17 +6,12 @@ from multiprocessing import Process, Queue
 from queue import Empty
 from functools import partial
 import mne_lsl.lsl
-import subprocess
 
-import sounddevice as sd
-import numpy as np
-import pandas as pd
-fs = 46000
-df_alert = pd.read_csv('alert.csv')
-start_data = df_alert['Amplitude'].values
 
-start_max_val = np.max(np.abs(start_data))
-normalized_data_start = start_data / np.max(np.abs(start_data))
+def play_sound():
+    for x in range(2):
+        print('\007')
+        time.sleep(1)
 
 
 def _target(queue, address=None, backend=None, interface=None, name=None):
@@ -63,12 +58,10 @@ def _target(queue, address=None, backend=None, interface=None, name=None):
         print('Connected', connect)
         
         muse.start()
-        # muse._subscribe_telemetry()
-
         initial_time = time.strftime("%H:%M:%S", time.localtime(time.time()))
 
         print('Streaming ...', initial_time )
-        # muse._subscribe_telemetry()
+        play_sound()
 
         try:
             while True:
@@ -81,7 +74,7 @@ def _target(queue, address=None, backend=None, interface=None, name=None):
             muse.stop()
             muse.disconnect()
             print("Disconnected ")
-            sd.play(normalized_data_start, fs)
+            play_sound()
             print('Start Time__', initial_time, "__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
     except Exception as e:
         # queue.put(e)
@@ -105,9 +98,12 @@ def get_raw(timeout=30, **kwargs):
                     yield item
             except Empty:
                 print("Queue is empty, stopping the stream.")
+                play_sound()
                 break  # Stop the loop if the queue is empty
     except Exception as e:
         print(f"An error occurred: {e}")
+        play_sound()
     finally:
         print("Stopped Streaming")
+        play_sound()
         print("__End time __", time.strftime("%H:%M:%S", time.localtime(time.time())) )
