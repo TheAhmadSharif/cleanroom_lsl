@@ -46,8 +46,6 @@ MUSE_SAMPLING_EEG_RATE = 256
 LSL_EEG_CHUNK = 12
 
 ####################################################
-
-
 class Muse:
     """Muse EEG headband"""
 
@@ -150,7 +148,6 @@ class Muse:
         self._init_sample()
         self.last_tm = 0
         self._init_control()
-        self.keep_alive()
         self.resume()
 
     def resume(self):
@@ -354,28 +351,24 @@ class Muse:
 ####################################################
 ####################################################
 initial_time = None
-alert_played = False
-
+print('\007')
+sleep(1)
 def play_sound():
-    global alert_played
-    print('play_sound', alert_played)
-    if(alert_played == False):
-        subprocess.call(["ffplay", "-nodisp", "-autoexit", "alert.mp3"])
+    for x in range(2):
         print('\007')
-        alert_played = True
+        sleep(1)
 
 def stop_bluetooth(backend, didconnect):
     if backend == 'bgapi':
         pygatt.BGAPIBackend(serial_port=interface).stop()
-  
+    else:
+        pygatt.GATTToolBackend().stop()
 
 
 def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backend):
     global initial_time
-    global alert_played 
     def start_stream():
         didConnect = False
-        global alert_played
         try:
             eeg_info = mne_lsl.lsl.StreamInfo(
                 "Muse",
@@ -415,9 +408,6 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                 initial_time = strftime("%H:%M:%S", localtime(time())) 
 
                 print(f"Streaming... EEG", '___', initial_time)
-
-                _counter = 1
-
               
                 muse.keep_alive()
 
@@ -429,12 +419,11 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                         muse.keep_alive()
                         sleep(1)
                     except KeyboardInterrupt:
-                        
                         print("Stream interrupted. Stopping...")
                         break
                     except Exception as e:
                         print()
-                        print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
+                        print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())), '_e_')
                         play_sound()
                         muse.stop()
                         sleep(3)
@@ -460,7 +449,7 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
             return False
 
     attempts = 0
-    max_attempts = 2
+    max_attempts = 3
 
     while attempts < max_attempts:
         try:
