@@ -12,11 +12,11 @@ import subprocess
 import sounddevice as sd
 import numpy as np
 import pandas as pd
-
+import subprocess
 import sounddevice as sd
 import numpy as np
 import pandas as pd
-fs = 46000
+fs = 44100
 df_alert = pd.read_csv('alert.csv')
 start_data = df_alert['Amplitude'].values
 start_max_val = np.max(np.abs(start_data))
@@ -34,7 +34,6 @@ import logging
 from pprint import pprint
 # address = '00:55:DA:BB:86:C9'
 
-from playsound import playsound
 ######### Constants #########
 ATTR_STREAM_TOGGLE = "273e0001-4c4d-454d-96be-f03bac821358"  
 ATTR_TP9 = "273e0003-4c4d-454d-96be-f03bac821358" 
@@ -91,6 +90,7 @@ class Muse:
 
         print(f"Connecting to {self.address}...", '______', strftime("%H:%M:%S", localtime(time())), '______')
         self.adapter =  pygatt.GATTToolBackend()
+        # self.adapter = pygatt.BGAPIBackend(serial_port=interface)
 
         ''' 
         if self.backend == 'bgapi':
@@ -353,15 +353,23 @@ class Muse:
 ####################  Stream    ####################
 ####################################################
 ####################################################
+initial_time = None
+alert_played = False
 
+def play_sound():
+    global alert_played
+    print('play_sound', alert_played)
+    if(alert_played == False):
+        subprocess.call(["ffplay", "-nodisp", "-autoexit", "alert.mp3"])
+        print('\007')
+        alert_played = True
 
 def stop_bluetooth(backend, didconnect):
     if backend == 'bgapi':
         pygatt.BGAPIBackend(serial_port=interface).stop()
   
 
-initial_time = None
-alert_played = False 
+
 def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backend):
     global initial_time
     global alert_played 
@@ -416,7 +424,7 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
                 ###############################
 
-                while mne_lsl.lsl.local_clock() - muse.last_timestamp < 5:
+                while mne_lsl.lsl.local_clock() - muse.last_timestamp < 10:
                     try:
                         muse.keep_alive()
                         sleep(1)
@@ -425,20 +433,19 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                         print("Stream interrupted. Stopping...")
                         break
                     except Exception as e:
+                        print()
                         print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
+                        play_sound()
                         muse.stop()
                         sleep(3)
                         return False
 
-                if mne_lsl.lsl.local_clock() - muse.last_timestamp > 5:
+                if mne_lsl.lsl.local_clock() - muse.last_timestamp > 10:
                     print("No data received for 60 seconds. Disconnecting...")
                     del muse
                 print("Disconnected.")
-                if(alert_played == False):
-                    sd.play(normalized_data_start, fs)
-                    sd.wait()
-                    alert_played = True
-                    print('\nStart Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())),  '__ Resume_status __\n')
+                play_sound()
+                print('\nStart Time__', initial_time, "__End time __", strftime("%Y-%m-%d %H:%M:%S", localtime(time())),  '__ Resume_status __\n')
 
 
                 ###############################
@@ -446,7 +453,8 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                
 
         except Exception as e:
-            print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())))
+            print(f"An error occurred: {e}", strftime("%H:%M:%S", localtime(time())), '__')
+            play_sound()
             stop_bluetooth(backend, didConnect)
             sleep(3)
             return False
@@ -461,8 +469,8 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
                 break
         except Exception as e:
             print(f"Error during streaming: {e}")
+            play_sound()
     
-        sleep(1)
         print(f"\nAttempting to reconnect ... (Attempt {attempts + 1}/{max_attempts})\n")
         sleep(0.25)  # Delay before trying to reconnect
         
