@@ -1,26 +1,14 @@
 ############# Muse ##############
 import bitstring
 import mne_lsl.lsl
-import numpy as np
-from time import time, localtime, strftime
+from time import time, localtime, strftime, sleep
 import pygatt
 import logging
 import argparse
 import sys
 import platform
-import subprocess
-import sounddevice as sd
 import numpy as np
-import pandas as pd
-import subprocess
-import sounddevice as sd
-import numpy as np
-import pandas as pd
-fs = 44100
-df_alert = pd.read_csv('alert.csv')
-start_data = df_alert['Amplitude'].values
-start_max_val = np.max(np.abs(start_data))
-normalized_data_start = start_data / np.max(np.abs(start_data))
+
 
 log_level = logging.ERROR
 backend = 'dongle'
@@ -29,9 +17,6 @@ interface = 'COM5' if platform.system() == 'Windows' else '/dev/ttyACM0'
 ############# Muse ##############
 
 from functools import partial
-from time import time, localtime, strftime, sleep
-import logging
-from pprint import pprint
 # address = '00:55:DA:BB:86:C9'
 
 ######### Constants #########
@@ -87,7 +72,9 @@ class Muse:
         """Connect to the device"""
 
         print(f"Connecting to {self.address}...", '______', strftime("%H:%M:%S", localtime(time())), '______')
-        self.adapter =  pygatt.GATTToolBackend()
+
+        self.interface = self.interface or 'hci0'
+        self.adapter =  pygatt.GATTToolBackend(self.interface)
         # self.adapter = pygatt.BGAPIBackend(serial_port=interface)
 
         ''' 
@@ -148,6 +135,7 @@ class Muse:
         self._init_sample()
         self.last_tm = 0
         self._init_control()
+        self.keep_alive()
         self.resume()
 
     def resume(self):
