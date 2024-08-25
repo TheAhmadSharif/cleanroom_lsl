@@ -73,7 +73,7 @@ class Muse:
 
         print(f"Connecting to {self.address}...", '______', strftime("%H:%M:%S", localtime(time())), '______')
 
-        self.interface = self.interface or 'hci0'
+        self.interface = 'gatt' or 'hci0'
         self.adapter =  pygatt.GATTToolBackend(self.interface)
         # self.adapter = pygatt.BGAPIBackend(serial_port=interface)
 
