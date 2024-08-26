@@ -397,7 +397,6 @@ def stream(address, ppg=False, acc=False, gyro=False, preset=None, backend=backe
 
                 print(f"Streaming... EEG", '___', initial_time)
               
-                muse.keep_alive()
 
 
                 ###############################
